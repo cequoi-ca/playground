@@ -26,54 +26,97 @@ Creating a cart-service using Python with FastAPI, PostgreSQL, Docker, and Docke
 ### 2. Database Connection and SQL Schema
 
 - **Database Connection Code**: In your main application file (e.g., `main.py`), add the following code to connect to the PostgreSQL database at startup:
+```
+  CREATE TABLE IF NOT EXISTS cart_items (
+      user_id VARCHAR NOT NULL,
+      product_id VARCHAR NOT NULL,
+      quantity INTEGER NOT NULL,
+      PRIMARY KEY (user_id, product_id)
+  );
+```
 
-  ```python
-  from sqlalchemy import create_engine
+```python
+# db.py
 
-  DATABASE_URL = "postgresql://username:password@localhost/dbname"
-  engine = create_engine(DATABASE_URL)
-  ```
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@127.0.0.1:5432/cartdb")
+# DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@db:5432/cartdb")
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+BoundSession = sessionmaker(bind=db)
+
+```
 
 - **SQL Schema for User Cart**: Create a file `models.py` and define the schema as follows:
 
   ```python
-  from sqlalchemy import Column, Integer, String, Float, create_engine, MetaData, Table
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import NoResultFound
+from db import SessionLocal, engine
+from models import CartItem, Base 
+from pydantic import BaseModel
 
-  metadata = MetaData()
+# pydantic
+class CartItemRequest(BaseModel):
+    product_id: str
+    quantity: int
 
-  cart = Table('cart', metadata,
-      Column('id', Integer, primary_key=True),
-      Column('user_id', String),
-      Column('product_id', String),
-      Column('quantity', Integer),
-  )
-  ```
+app = FastAPI()
 
-### 3. Implementing the HTTP API
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
-- **FastAPI Application**: In `main.py`, implement the API as follows:
 
-  ```python
-  from fastapi import FastAPI, HTTPException
-  from models import cart
-  from sqlalchemy.sql import select, insert, update, delete
+@app.post("/cart/users/{user_id}")
+def add_or_update_cart_item(user_id: str, cart_item: CartItemRequest, db: Session = Depends(get_db)):
+    db_item = db.query(CartItem).filter(CartItem.user_id==user_id, CartItem.product_id==cart_item.product_id).first()
+    
+    if db_item:
+        # If the item exists, update the quantity
+        db_item.quantity += cart_item.quantity
+    else:
+        # If the item does not exist, create a new one
+        db_item = CartItem(user_id=user_id, product_id=cart_item.product_id, quantity=cart_item.quantity)
+        db.add(db_item)
+    
+    try:
+        db.commit()
+        db.refresh(db_item)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return db_item
 
-  app = FastAPI()
+@app.get("/cart/users/{user_id}")
+async def get_cart_items(user_id: str, db: Session = Depends(get_db)):
+    cart_items = db.query(CartItem).filter(CartItem.user_id == user_id).all()
+    if not cart_items:
+        raise HTTPException(status_code=404, detail="No cart items found for this user")
+	# List expression
+    return [{"product_id": item.product_id, "quantity": item.quantity} for item in cart_items]
 
-  @app.post("/cart/{user_id}")
-  async def add_item(user_id: str, item: dict):
-      # Implement logic to add item to cart
-      pass
+@app.delete("/cart/{user_id}")
+async def delete_cart_items(user_id: str, db: Session = Depends(get_db)):
+    result = db.query(Cart).filter(Cart.user_id == user_id).delete()
+    if result == 0:
+        raise HTTPException(status_code=404, detail="No cart items found for this user")
 
-  @app.get("/cart/{user_id}")
-  async def get_cart(user_id: str):
-      # Implement logic to retrieve user's cart
-      pass
+    db.commit()
+    return {"msg": "All cart items deleted"}
 
-  @app.delete("/cart/{user_id}")
-  async def delete_cart(user_id: str):
-      # Implement logic to delete user's cart
-      pass
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8080)
   ```
 
 ### 4. Docker Configuration
