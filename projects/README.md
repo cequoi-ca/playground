@@ -1,46 +1,14 @@
-# Services
+# Projects
 
+## Database
 
-## Product Catalog Service
-```
-curl -X 'GET' \
-  'http://product-catalog-service/get-product?product_id=OLJCESPC7Z' \
-  -H 'accept: application/json'
+![](assets/database.jpeg)
+## Services
+### Cart Service
 
+**Tasks:**
+- Create cart service with database storage
 
-# Result
-{
-    "products": [
-        {
-            "id": "OLJCESPC7Z",
-            "name": "Sunglasses",
-            "description": "Add a modern touch to your outfits with these sleek aviator sunglasses.",
-            "picture": "/static/img/products/sunglasses.jpg",
-            "priceUsd": {
-                "currencyCode": "USD",
-                "units": 19,
-                "nanos": 990000000
-            },
-            "categories": ["accessories"]
-        },
-        {
-            "id": "66VCHSJNUP",
-            "name": "Tank Top",
-            "description": "Perfectly cropped cotton tank, with a scooped neckline.",
-            "picture": "/static/img/products/tank-top.jpg",
-            "priceUsd": {
-                "currencyCode": "USD",
-                "units": 18,
-                "nanos": 990000000
-            },
-            "categories": ["clothing", "tops"]
-        }
-     ]
-}
-```
-
-
-## Cart Service
 ```
 curl -X 'GET' \
   'http://cart-service/cart/users/abcde' \
@@ -54,8 +22,38 @@ curl -X 'POST' 'http://cart-service/cart/users/abcde' \
   "quantity": 8
 }'
 ```
+### Product Catalog Service
 
-## Checkout Service
+**Tasks:**
+- Create Product Catalog Service with database storage
+
+```
+{
+    "products": [
+        {
+            "id": "OLJCESPC7Z",
+            "name": "Sunglasses",
+            "description": "Add a modern touch to your outfits with these sleek aviator sunglasses.",
+            "picture": "/static/img/products/sunglasses.jpg",
+            "price": 19,
+        },
+        {
+            "id": "66VCHSJNUP",
+            "name": "Tank Top",
+            "description": "Perfectly cropped cotton tank, with a scooped neckline.",
+            "picture": "/static/img/products/tank-top.jpg",
+            "price": 18,
+        }
+     ]
+}
+```
+### Checkout Service
+
+**Tasks:**
+- Create Checkout Service
+
+Input to the Checkout Service is a JSON object with the following structure:  
+**Input**
 ```
 curl -X 'POST' \
   'http://checkout-service/checkout' \
@@ -63,7 +61,6 @@ curl -X 'POST' \
   -H 'Content-Type: application/json' \
   -d '{
   "user_id": "abcde",
-  "user_currency": "USD",
   "address": {
     "street_address": "1600 Amp street",
     "city": "Mountain View",
@@ -80,34 +77,34 @@ curl -X 'POST' \
   }
 }'
 ```
-
-
-## Payment Service
+#### SQL
 ```
-curl -X 'POST' \
-  'http://payment-service/charge' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "amount": {
-    "currency_code": "USD",
-    "units": 245,
-    "nanos": 9900000
-  },
-  "credit_card": {
-    "credit_card_number": "4432-8015-6152-0454",
-    "credit_card_cvv": 672,
-    "credit_card_expiration_year": 2024,
-    "credit_card_expiration_month": 1
-  }
-}'
+CREATE TABLE "order" (
+  "order_id" varchar(20),
+  "email" varchar(50),
+  "amount" float,
+  PRIMARY KEY ("order_id")
+);
+
 ```
 
+**Tasks:**
+```
+The Checkout Service should read the user id and perform the following steps:
+- Read the user's cart from the cart service and fetch the product id
+- Read the product from the product catalog service to get the price
+- Calculate the total price of the cart
+- Generate a unique order id  
+- Store the order in the database in the order table
 
-## Login Service
+**Future Task**
+- Implement Shipping Service
+- Implement Payment Service
+- Implement Login Service Service
 
-## Shipping Service
 
-## Login Service
-
-## Recommendation Service
+### Payment Service
+### Login Service
+### Shipping Service
+### Login Service
+### Recommendation Service
