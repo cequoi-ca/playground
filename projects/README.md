@@ -89,7 +89,6 @@ CREATE TABLE "order" (
 ```
 
 **Tasks:**
-```
 The Checkout Service should read the user id and perform the following steps:
 - Read the user's cart from the cart service and fetch the product id
 - Read the product from the product catalog service to get the price
