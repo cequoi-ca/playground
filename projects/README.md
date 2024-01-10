@@ -96,14 +96,24 @@ The Checkout Service should read the user id and perform the following steps:
 - Generate a unique order id  
 - Store the order in the database in the order table
 
+
+### Sign up/Login Service Service
+The signup service should allow a user to create/delete an account.
+Upon signing up a user id is created in the user table, the
+user signs up with email.
+
+POST http://signup-service/register
+{
+  email: "someone@example.com",
+}
+
+
 **Future Task**
 - Implement Shipping Service
 - Implement Payment Service
-- Implement Login Service Service
 
 
 ### Payment Service
 ### Login Service
 ### Shipping Service
-### Login Service
 ### Recommendation Service
